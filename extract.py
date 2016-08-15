@@ -1,9 +1,10 @@
 from detect import kbdetect
 from prune import kbprune
+from show import kbshow
 from skimage import io,transform,color
 import numpy as np
 
-im = io.imread('panda.jpeg')
+im = io.imread('background1.jpg')
 im = color.rgb2gray(im)
 
 row,column = im.shape
@@ -49,6 +50,6 @@ base_regions = kbdetect(im,windows,mask)
 # now clustering must be done
 regions = kbprune(base_regions, K, v_th)
 
-# kbshow(im,regions);
+kbshow(im,regions)
 
 # regions.gamma

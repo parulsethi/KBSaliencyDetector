@@ -5,6 +5,12 @@ import numpy as np
   # instead of the other way around
 
 def kbprune(candidates,K,v_th):
+
+    rgamma = np.array([])
+    rscale = np.array([])
+    rr = np.array([])
+    rc = np.array([])
+
     cgamma = candidates[0]
     cscale = candidates[1]
     cr = candidates[2]
@@ -41,13 +47,14 @@ def kbprune(candidates,K,v_th):
 
     D = np.zeros((n,n))
 
-    pts = [tc,tr,tscale]
+    pts = np.array(list(zip(tc,tr,tscale)))
+
 
     # fill it with distances
     for i in range(1,n):
-        pt = pts[i,:]
+        pt = pts[i][:]
 
-        dists = np.sqrt(((pts-np.tile(pt,(size(pts,1),1)))**2).sum(axis=1))
+        dists = np.sqrt(((pts-np.tile(pt,(pts.shape[0],1)))**2).sum(axis=1))
 
         D[i,:] = dists.T
         D[:,i] = dists        
@@ -60,37 +67,43 @@ def kbprune(candidates,K,v_th):
     for i in range(1,n):
         index = i
 
-        pos[1,1] = tc[index]
-        pos[2,1] = tr[index]
-        pos[3,1] = tscale[index]
+        pos[0,1] = tc[index]
+        pos[1,1] = tr[index]
+        pos[2,1] = tscale[index]
 
-        [sD,sidx] = sort(D[index,:])
+        sidx = np.argsort(D[index,:])
 
         for j in range(1,K):
-            pos[1,j+1] = tc[sidx(j+1)]
-            pos[2,j+1] = tr[sidx(j+1)]
-            pos[3,j+1] = tscale[sidx(j+1)]
+            pos[0,j+1] = tc[sidx[j+1]]
+            pos[1,j+1] = tr[sidx[j+1]]
+            pos[2,j+1] = tscale[sidx[j+1]]
+
+        cent = np.array([np.mean(pos,axis=1)])
         
-        cent = np.mean(pos,axis=1)
+        v = np.var(np.sqrt( ((pos-np.tile(cent.T,(1,K+1)))**2).sum(axis=0) ))
 
-        v = np.var(np.sqrt(((pos-np.tile(cent,([1,K+1]))**2).sum(axis=0))))
-
-        if v > v_th:
-            continue
-
+        # if v > v_th:
+        #     continue
+        # print("zzzzzzzzzzzzzzzzzzzzzzzz")
         # now that we know the regions is "suffiently clustered", make sure the
         # region is "far enough" from already clustered regions
+        cent = np.mean(pos,axis=1)
+
         if nReg > 0:
-            d = np.sqrt((([rc,rr,rscale] - np.tile(cent.T,(nReg,1)))**2).sum(axis=1))
-            if (cent[3]>=d).sum() == 0:
+            pp = np.array(list(zip(rc,rr,rscale)))
+            d = np.sqrt(((pp - np.tile(cent.T,(nReg,1)))**2).sum(axis=1))
+            if (cent[2]>=d).sum() == 0:
                 nReg = nReg+1
-                rc[nReg,1] = cent[1]
-                rr[nReg,1] = cent[2]
-                rscale[nReg,1] = cent[3]
-                rgamma[nReg,1] = tgamma[index]
+                rc = np.append(rc,cent[0])
+                rr = np.append(rr,cent[1])
+                rscale = np.append(rscale,cent[2])
+                rgamma = np.append(rgamma,tgamma[index])
         else:
             nReg = nReg+1
-            rc[nReg,1] = cent[1]
-            rr[nReg,1] = cent[2]
-            rscale[nReg,1] = cent[3]
-            rgamma[nReg,1] = tgamma[index]
+            # print(cent[0],cent[1],cent[2])
+            rc = np.append(rc,cent[0])
+            rr = np.append(rr,cent[1])
+            rscale = np.append(rscale,cent[2])
+            rgamma = np.append(rgamma,tgamma[index])
+
+    return rgamma,rscale,rr,rc
