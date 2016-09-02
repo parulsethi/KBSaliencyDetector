@@ -17,9 +17,8 @@ def kbprune(candidates,K,v_th):
     cc = candidates[3]
 
     # apply a global threshold to the gamma vals
-    thresh_val = .6 * max(cgamma)
+    thresh_val = .7 * max(cgamma)
 
-    # indices = find(cgamma > thresh_val)
     indices = np.nonzero(cgamma > thresh_val)
 
     tgamma = cgamma[indices]
@@ -51,36 +50,36 @@ def kbprune(candidates,K,v_th):
 
 
     # fill it with distances
-    for i in range(1,n):
+    for i in range(n):
         pt = pts[i][:]
 
         dists = np.sqrt(((pts-np.tile(pt,(pts.shape[0],1)))**2).sum(axis=1))
 
         D[i,:] = dists.T
-        D[:,i] = dists        
+        D[:,i] = dists
 
     nReg = 0
     regions = []
     pos = np.zeros((3,K+1))
 
     # now do the pruning process
-    for i in range(1,n):
+    for i in range(n):
         index = i
 
-        pos[0,1] = tc[index]
-        pos[1,1] = tr[index]
-        pos[2,1] = tscale[index]
+        pos[0,0] = tc[index]
+        pos[1,0] = tr[index]
+        pos[2,0] = tscale[index]
 
         sidx = np.argsort(D[index,:])
 
-        for j in range(1,K):
+        for j in range(K):
             pos[0,j+1] = tc[sidx[j+1]]
             pos[1,j+1] = tr[sidx[j+1]]
             pos[2,j+1] = tscale[sidx[j+1]]
 
         cent = np.array([np.mean(pos,axis=1)])
-        
-        v = np.var(np.sqrt( ((pos-np.tile(cent.T,(1,K+1)))**2).sum(axis=0) ))
+
+        v = np.var(np.sqrt(((pos-np.tile(cent.T,(1,K+1)))**2).sum(axis=0)))
 
         # if v > v_th:
         #     continue
@@ -106,4 +105,6 @@ def kbprune(candidates,K,v_th):
             rscale = np.append(rscale,cent[2])
             rgamma = np.append(rgamma,tgamma[index])
 
+
+    # print("tscale",tscale)
     return rgamma,rscale,rr,rc

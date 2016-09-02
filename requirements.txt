@@ -1,3 +1,5 @@
+PIL
+mpldatacursor
 scikit-image==0.12.3
 cycler==0.10.0
 Cython==0.24

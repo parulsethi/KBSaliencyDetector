@@ -2,6 +2,7 @@
 
 import matplotlib.pyplot as plt
 
+
 def kbshow(im,regions):
 
     rg = regions[0]
@@ -18,7 +19,7 @@ def kbshow(im,regions):
 
     #     X = x+regions.c[i]
     #     Y = y+regions.r[i]
-        
+
     #     j=num2str(i)
 
     #     plot(X,Y,'r-')
@@ -49,7 +50,7 @@ def kbshow(im,regions):
 
     #     X = x+regions.c(i)
     #     Y = y+regions.r(i)
-        
+
     #     j=num2str(i)
 
     #     plot(X,Y,'r-')
