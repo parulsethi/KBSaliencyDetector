@@ -1,110 +1,73 @@
 import numpy as np
-# %KBPRUNE Remove weak regions from Kadir-Brady candidates
+from scipy import ndimage as ndi
 
-  # Now we sort the gamma values in temp before we get the distances,
-  # instead of the other way around
+def kbprune(candidate_regions, saliency_threshold, v_th, K=7):
 
-def kbprune(candidates,K,v_th):
+    gamma, scale, row, column = (np.array([]) for i in range(4))
+    cgamma, cscale, cr, cc = candidate_regions
 
-    rgamma = np.array([])
-    rscale = np.array([])
-    rr = np.array([])
-    rc = np.array([])
+    # apply a global threshold to the gamma values
+    threshold = saliency_threshold * max(cgamma)
+    t = np.nonzero(cgamma > threshold)
+    t_gamma, t_scale, t_r, t_c = cgamma[t], cscale[t], cr[t], cc[t]
 
-    cgamma = candidates[0]
-    cscale = candidates[1]
-    cr = candidates[2]
-    cc = candidates[3]
+    # sort the gamma values and order the rest by that
+    s_i = np.argsort(t_gamma)[::-1]
+    t_gamma, t_scale, t_r, t_c = t_gamma[s_i], t_scale[s_i], t_r[s_i], t_c[s_i]
 
-    # apply a global threshold to the gamma vals
-    thresh_val = .7 * max(cgamma)
-
-    indices = np.nonzero(cgamma > thresh_val)
-
-    tgamma = cgamma[indices]
-    tscale = cscale[indices]
-    tr = cr[indices]
-    tc = cc[indices]
-
-    # sort the gamma values, and order everything by that
-    sidx = np.argsort(tgamma)[::-1]
-    tgamma = tgamma[sidx]
-    tscale = tscale[sidx]
-    tr = tr[sidx]
-    tc = tc[sidx]
-
-    # create a distance matrix
-    n = max(tgamma.shape)
-
-    # if K+1 > n
-    #     regions.gamma = temp.gamma(1)
-    #     regions.r = temp.r(1)
-    #     regions.c = temp.c(1)
-    #     regions.scale = temp.scale(1)
-    #     return
-    # end
-
-    D = np.zeros((n,n))
-
-    pts = np.array(list(zip(tc,tr,tscale)))
-
+    # create a Distance matrix
+    n = max(t_gamma.shape)
+    D = np.zeros((n, n))
+    pts = np.array(list(zip(t_c, t_r, t_scale)))
 
     # fill it with distances
     for i in range(n):
         pt = pts[i][:]
-
-        dists = np.sqrt(((pts-np.tile(pt,(pts.shape[0],1)))**2).sum(axis=1))
-
-        D[i,:] = dists.T
-        D[:,i] = dists
+        # calculate the distances b/w regions
+        dists = np.sqrt(((pts-np.tile(pt, (pts.shape[0], 1)))**2).sum(axis=1))
+        D[i, :], D[:, i] = dists.T, dists
 
     nReg = 0
-    regions = []
-    pos = np.zeros((3,K+1))
+    # clusters matrix
+    cluster = np.zeros((3, K+1))
 
-    # now do the pruning process
-    for i in range(n):
-        index = i
-
-        pos[0,0] = tc[index]
-        pos[1,0] = tr[index]
-        pos[2,0] = tscale[index]
-
-        sidx = np.argsort(D[index,:])
-
+    # pruning process
+    for index in range(n):
+        cluster[0, 0] = t_c[index]
+        cluster[1, 0] = t_r[index]
+        cluster[2, 0] = t_scale[index]
+        s_i = np.argsort(D[index, :])
+        # fill in the neighbouring regions
         for j in range(K):
-            pos[0,j+1] = tc[sidx[j+1]]
-            pos[1,j+1] = tr[sidx[j+1]]
-            pos[2,j+1] = tscale[sidx[j+1]]
+            cluster[0, j+1] = t_c[s_i[j+1]]
+            cluster[1, j+1] = t_r[s_i[j+1]]
+            cluster[2, j+1] = t_scale[s_i[j+1]]
 
-        cent = np.array([np.mean(pos,axis=1)])
+        # clusters center point
+        center = np.array([np.mean(cluster, axis=1)])
 
-        v = np.var(np.sqrt(((pos-np.tile(cent.T,(1,K+1)))**2).sum(axis=0)))
+        # check if the regions are "suffiently clustered", if variance is less than threshold
+        v = np.var(np.sqrt(((cluster - np.tile(center.T, (1, K+1)))**2).sum(axis=0)))
+        if v > v_th:
+            continue
 
-        # if v > v_th:
-        #     continue
-        # print("zzzzzzzzzzzzzzzzzzzzzzzz")
-        # now that we know the regions is "suffiently clustered", make sure the
-        # region is "far enough" from already clustered regions
-        cent = np.mean(pos,axis=1)
-
+        center = np.mean(cluster, axis=1)
         if nReg > 0:
-            pp = np.array(list(zip(rc,rr,rscale)))
-            d = np.sqrt(((pp - np.tile(cent.T,(nReg,1)))**2).sum(axis=1))
-            if (cent[2]>=d).sum() == 0:
+            # make sure the region is "far enough" from already clustered regions
+            d = np.sqrt(((np.array(list(zip(column, row, scale)))
+                            - np.tile(center.T, (nReg, 1)))**2).sum(axis=1))
+            if (center[2] >= d).sum() == 0:
                 nReg = nReg+1
-                rc = np.append(rc,cent[0])
-                rr = np.append(rr,cent[1])
-                rscale = np.append(rscale,cent[2])
-                rgamma = np.append(rgamma,tgamma[index])
+                column = np.append(column, center[0])
+                row = np.append(row, center[1])
+                scale = np.append(scale, center[2])
+                gamma = np.append(gamma, t_gamma[index])
         else:
             nReg = nReg+1
-            # print(cent[0],cent[1],cent[2])
-            rc = np.append(rc,cent[0])
-            rr = np.append(rr,cent[1])
-            rscale = np.append(rscale,cent[2])
-            rgamma = np.append(rgamma,tgamma[index])
+            column = np.append(column, center[0])
+            row = np.append(row, center[1])
+            scale = np.append(scale, center[2])
+            gamma = np.append(gamma, t_gamma[index])
 
-
-    # print("tscale",tscale)
-    return rgamma,rscale,rr,rc
+    return np.array([row, column, scale])
+    
