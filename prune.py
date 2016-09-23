@@ -2,7 +2,9 @@ import numpy as np
 from scipy import ndimage as ndi
 
 def kbprune(candidate_regions, saliency_threshold, v_th, K=7):
-
+    """ Pruning of detected keypoints and selecting 
+        the ones with high saliency score
+    """
     gamma, scale, row, column = (np.array([]) for i in range(4))
     cgamma, cscale, cr, cc = candidate_regions
 

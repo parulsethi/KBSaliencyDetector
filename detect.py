@@ -4,6 +4,9 @@ from scipy import ndimage as ndi
 import numpy as np
 
 def kbdetect(image, scales):
+    """ Detect keypoints based on Shannon entropy and weigh
+        them with difference of descriptors in scale space
+    """
     image = skimage.img_as_ubyte(image)
     nr, nc = image.shape
     # find pixels that we are going to examine
